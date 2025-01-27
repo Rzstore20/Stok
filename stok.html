@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cek Stok Produk</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Arial', sans-serif;
+      background: linear-gradient(135deg, #007bff, #6c63ff);
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      text-align: center;
+      background: #ffffff;
+      color: #333;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+      width: 500px;
+      animation: fadeIn 1s ease-in-out;
+      overflow-y: auto;
+      max-height: 90vh;
+    }
+
+    .logo {
+      width: 100px;
+      height: 100px;
+      margin: 0 auto 20px;
+    }
+
+    .logo img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 20px;
+      color: #007bff;
+    }
+
+    .button {
+      padding: 12px 20px;
+      font-size: 1rem;
+      font-weight: bold;
+      color: #fff;
+      background: linear-gradient(135deg, #007bff, #6c63ff);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .button:hover {
+      background: linear-gradient(135deg, #0056b3, #4e45d1);
+      transform: translateY(-3px);
+      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      word-wrap: break-word;
+      max-height: 400px;
+      overflow-y: auto;
+      box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      text-align: left;
+    }
+
+    th, td {
+      padding: 12px;
+      border-bottom: 1px solid #ddd;
+      font-size: 14px;
+    }
+
+    th {
+      background-color: #007bff;
+      color: #fff;
+      text-align: left;
+    }
+
+    td {
+      background: #f9f9f9;
+    }
+
+    tr:nth-child(even) td {
+      background: #f2f2f2;
+    }
+
+    .stok-tersedia {
+      color: #28a745;
+      font-weight: bold;
+    }
+
+    .stok-habis {
+      color: #dc3545;
+      font-weight: bold;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">
+      <img src="https://tools.kobostore.my.id/uploads/rzstore/8690506123.png" alt="Logo">
+    </div>
+    <h1>Cek Stok Paket</h1>
+    <button class="button" onclick="cekStok()">Cek Stok</button>
+    <div class="result" id="result">
+      <p>Hasil akan muncul di sini...</p>
+    </div>
+  </div>
+
+  <script>
+    async function cekStok() {
+      const resultDiv = document.getElementById('result');
+      resultDiv.innerHTML = '<p>Memuat data...</p>';
+
+      try {
+        const response = await fetch('https://panel.khfy-store.com/api/api-xl-v7/cek_stock_akrab', {
+          method: 'POST',
+          headers: {
+            'accept': 'application/json',
+            'content-type': 'application/x-www-form-urlencoded',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+
+        const textData = await response.text();
+
+        // Menghilangkan simbol \n dan karakter tidak diperlukan
+        const cleanedData = textData
+          .replace(/\\n/g, ' ') // Hilangkan simbol \n
+          .replace(/(\r\n|\n|\r)/gm, ' ') // Hilangkan karakter baris baru
+          .replace(/\s{2,}/g, ' ') // Hilangkan spasi berlebih
+          .trim();
+
+        const stokArray = cleanedData.split(' tersedia').filter(item => item.trim() !== '');
+
+        let tableHtml = `
+          <table>
+            <thead>
+              <tr>
+                <th>Nama Produk</th>
+                <th>Status</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        stokArray.forEach(item => {
+          const parts = item.split(':');
+          if (parts.length === 2) {
+            const namaProduk = parts[0].trim();
+            const stok = parseInt(parts[1].trim(), 10);
+            const status = stok > 0
+              ? `<span class="stok-tersedia">${stok} tersedia</span>`
+              : `<span class="stok-habis">Habis</span>`;
+            const linkBeli = stok > 0
+              ? `<a href="https://web.telegram.org/k/#@Rzstorex_bot" target="_blank" class="button">Beli Klik Disini</a>`
+              : '-';
+
+            tableHtml += `
+              <tr>
+                <td>${namaProduk}</td>
+                <td>${status}</td>
+                <td>${linkBeli}</td>
+              </tr>
+            `;
+          }
+        });
+
+        tableHtml += `
+            </tbody>
+          </table>
+        `;
+        resultDiv.innerHTML = tableHtml;
+      } catch (error) {
+        resultDiv.innerHTML = `<p style="color: red;">Gagal memuat data: ${error.message}</p>`;
+      }
+    }
+  </script>
+</body>
+</html>
